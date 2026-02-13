@@ -14,7 +14,14 @@ from datetime import datetime
 import websockets
 
 # ── Configuration ──────────────────────────────────────────
-WS_URL    = "ws://localhost:8000/ws/device"
+USE_RENDER      = False                           # ← Set True to connect to Render deployment
+RENDER_APP_NAME = "health-monitor-system"         # Your Render app name
+
+WS_URL = (
+    f"wss://{RENDER_APP_NAME}.onrender.com/ws/device"
+    if USE_RENDER
+    else "ws://localhost:8000/ws/device"
+)
 DEVICE_ID = "PATIENT_001"
 INTERVAL  = 1  # seconds between readings
 
