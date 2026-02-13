@@ -43,9 +43,15 @@ async def handle_incoming(ws):
         payload  = msg.get("payload")
 
         if msg_type == "SYNC_TIME":
-            print(f"\n📟 [OLED DISPLAY]: Updated Next Alarm to --> {payload}")
+            print(f"\n📟 [OLED DISPLAY]: Next Pill Alarm set for --> {payload}")
         elif msg_type == "ALARM":
-            print(f"\n🔔 [BUZZER]: Beep! Beep! Take Medicine!")
+            medicine = msg.get("medicine", "Unknown")
+            alarm_time = msg.get("time", "")
+            print(f"\n📟 [OLED DISPLAY]: 🔔 ALARM RANG! Take Medicine: {medicine}")
+            print(f"   ⏰ Scheduled Time: {alarm_time}")
+            print(f"   🔊 [BUZZER]: Beep! Beep! Beep!")
+        elif msg_type == "STOP_ALARM":
+            print(f"\n✅ [BUZZER OFF]: Patient confirmed safe — alarm stopped.")
         else:
             print(f"\n📩 [UNKNOWN MSG]: {msg}")
 

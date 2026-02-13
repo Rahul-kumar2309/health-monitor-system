@@ -10,7 +10,7 @@ import json
 import logging
 import sqlite3
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Set
 
@@ -93,14 +93,24 @@ def fetch_history(limit: int = 10) -> list[dict]:
     return [dict(r) for r in rows]
 
 # ---------------------------------------------------------------------------
-# Medicine Reminder State
+# Medicine Reminder State (Multiple Alarms)
 # ---------------------------------------------------------------------------
-reminder_time: str | None = None          # e.g. "14:30"
-alarm_fired_for: str | None = None        # prevents repeated alarms for same minute
+alarms: list = []           # [{"id": 1, "time": "02:30 PM", "medicine": "Dolo"}, ...]
+next_alarm_id: int = 1
+alarm_fired_set: set = set()  # tracks (alarm_id, minute_str) to avoid repeats
+
+# ---------------------------------------------------------------------------
+# Fall Detection Toggle (Maintenance Mode)
+# ---------------------------------------------------------------------------
+FALL_DETECTION_ENABLED: bool = True
 
 
-class ReminderRequest(BaseModel):
-    time: str  # "HH:MM"
+class AddReminderRequest(BaseModel):
+    time: str       # "hh:mm AM/PM"
+    medicine: str   # medicine name
+
+class DeleteReminderRequest(BaseModel):
+    id: int
 
 # ---------------------------------------------------------------------------
 # Connection Manager
@@ -170,22 +180,27 @@ manager = ConnectionManager()
 # ---------------------------------------------------------------------------
 
 async def alarm_checker():
-    """Runs every 10 s — fires alarm when current time matches reminder_time."""
-    global alarm_fired_for
+    """Runs every 10 s — checks ALL alarms and fires matching ones."""
+    global alarm_fired_set
     while True:
         await asyncio.sleep(10)
-        if reminder_time is None:
+        if not alarms:
             continue
-        now_hm = datetime.now().strftime("%H:%M")
-        if now_hm == reminder_time and alarm_fired_for != now_hm:
-            alarm_fired_for = now_hm
-            alarm_msg = json.dumps({"type": "ALARM", "payload": True})
-            logger.info("⏰  ALARM triggered for %s — broadcasting", now_hm)
-            await manager.broadcast_to_frontends(alarm_msg)
-            await manager.broadcast_to_devices(alarm_msg)
-        elif now_hm != reminder_time:
-            # Reset so alarm can fire again next time the minute matches
-            alarm_fired_for = None
+        now_12 = datetime.now().strftime("%I:%M %p")
+        for alarm in alarms:
+            fire_key = (alarm["id"], now_12)
+            if alarm["time"] == now_12 and fire_key not in alarm_fired_set:
+                alarm_fired_set.add(fire_key)
+                alarm_msg = json.dumps({
+                    "type": "ALARM",
+                    "medicine": alarm["medicine"],
+                    "time": alarm["time"],
+                })
+                logger.info("⏰  ALARM: %s at %s — broadcasting", alarm["medicine"], now_12)
+                await manager.broadcast_to_frontends(alarm_msg)
+                await manager.broadcast_to_devices(alarm_msg)
+        # Clean up fired keys for times that no longer match
+        alarm_fired_set = {k for k in alarm_fired_set if k[1] == now_12}
 
 # ---------------------------------------------------------------------------
 # Lifespan (startup / shutdown)
@@ -226,9 +241,13 @@ async def websocket_endpoint(websocket: WebSocket, client_type: str):
             data = await websocket.receive_text()
             if client_type == "device":
                 logger.info("Data from device → saving & broadcasting")
-                # Save to DB
                 try:
                     parsed = json.loads(data)
+                    # Guard: suppress fall events when fall detection is OFF
+                    if not FALL_DETECTION_ENABLED and parsed.get("fall_detected"):
+                        parsed["fall_detected"] = False
+                        data = json.dumps(parsed)
+                        logger.info("Fall suppressed — detection disabled")
                     save_vital(parsed)
                 except Exception as e:
                     logger.error("DB save error: %s", e)
@@ -248,26 +267,176 @@ async def websocket_endpoint(websocket: WebSocket, client_type: str):
 
 @app.get("/history")
 async def get_history():
-    """Return the last 10 vital readings (newest first)."""
-    rows = fetch_history(10)
+    """Return the last 50 vital readings (newest first)."""
+    rows = fetch_history(50)
     return JSONResponse(content=rows)
 
 
-@app.post("/set-reminder")
-async def set_reminder(req: ReminderRequest):
-    """
-    Set the medicine reminder time and immediately
-    broadcast SYNC_TIME to all connected devices.
-    """
-    global reminder_time, alarm_fired_for
-    reminder_time = req.time
-    alarm_fired_for = None  # reset so alarm can fire for new time
-    logger.info("Reminder set to %s — syncing with devices", reminder_time)
+@app.get("/history-summary")
+async def get_history_summary():
+    """Return up to 10 rows of 1-minute averaged data (last 10 minutes)."""
+    now = datetime.now()
+    cutoff = (now - timedelta(minutes=10)).isoformat()
 
-    sync_msg = json.dumps({"type": "SYNC_TIME", "payload": reminder_time})
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM vital_logs WHERE timestamp >= ? ORDER BY timestamp ASC",
+        (cutoff,),
+    ).fetchall()
+    conn.close()
+
+    raw = [dict(r) for r in rows]
+    if not raw:
+        return JSONResponse(content=[])
+
+    summary = []
+    for i in range(10):
+        bucket_start = now - timedelta(minutes=10) + timedelta(minutes=i)
+        bucket_end = bucket_start + timedelta(minutes=1)
+        start_iso = bucket_start.isoformat()
+        end_iso = bucket_end.isoformat()
+
+        bucket = [r for r in raw if start_iso <= r.get("timestamp", "") < end_iso]
+        if not bucket:
+            continue
+
+        hr_vals  = [r["heart_rate"] for r in bucket if r.get("heart_rate") is not None]
+        spo_vals = [r["spo2"]       for r in bucket if r.get("spo2") is not None]
+        tmp_vals = [r["temp"]       for r in bucket if r.get("temp") is not None]
+        falls    = sum(1 for r in bucket if r.get("fall_detected"))
+
+        summary.append({
+            "timestamp": bucket_start.strftime("%I:%M %p"),
+            "heart_rate": round(sum(hr_vals) / len(hr_vals), 1) if hr_vals else None,
+            "spo2":       round(sum(spo_vals) / len(spo_vals), 1) if spo_vals else None,
+            "temp":       round(sum(tmp_vals) / len(tmp_vals), 1) if tmp_vals else None,
+            "fall_detected": falls > 0,
+            "samples":    len(bucket),
+        })
+
+    return JSONResponse(content=summary)
+
+
+class FallToggleRequest(BaseModel):
+    enabled: bool
+
+
+@app.post("/toggle-fall-detection")
+async def toggle_fall_detection(req: FallToggleRequest):
+    """Enable or disable fall detection globally."""
+    global FALL_DETECTION_ENABLED
+    FALL_DETECTION_ENABLED = req.enabled
+    state = "ENABLED" if req.enabled else "DISABLED"
+    logger.info("Fall detection %s", state)
+    return {"status": "ok", "fall_detection": state}
+
+
+@app.get("/report-data")
+async def get_report_data(duration: str = "1_day"):
+    """
+    Return time-slot averaged data for PDF reports.
+    Durations: 1_minute (10 slots), 1_hour (20 slots), 1_day (50 slots).
+    """
+    if duration == "1_minute":
+        delta = timedelta(minutes=1)
+        slots = 10
+    else:  # 1_hour (default)
+        delta = timedelta(hours=1)
+        slots = 15
+
+    now = datetime.now()
+    cutoff = (now - delta).isoformat()
+
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM vital_logs WHERE timestamp >= ? ORDER BY timestamp ASC",
+        (cutoff,),
+    ).fetchall()
+    conn.close()
+
+    raw = [dict(r) for r in rows]
+    total_raw = len(raw)
+
+    if total_raw == 0:
+        return JSONResponse(content={"slots": [], "total_raw": 0, "duration": duration})
+
+    # Divide time range into equal slots and average
+    slot_duration = delta / slots
+    aggregated = []
+
+    for i in range(slots):
+        slot_start = now - delta + (slot_duration * i)
+        slot_end = slot_start + slot_duration
+        start_iso = slot_start.isoformat()
+        end_iso = slot_end.isoformat()
+
+        bucket = [r for r in raw if start_iso <= r.get("timestamp", "") < end_iso]
+
+        if not bucket:
+            continue
+
+        hr_vals  = [r["heart_rate"] for r in bucket if r.get("heart_rate") is not None]
+        spo_vals = [r["spo2"]       for r in bucket if r.get("spo2") is not None]
+        tmp_vals = [r["temp"]       for r in bucket if r.get("temp") is not None]
+        falls    = sum(1 for r in bucket if r.get("fall_detected"))
+
+        aggregated.append({
+            "slot":       i + 1,
+            "time_start": slot_start.strftime("%I:%M:%S %p"),
+            "time_end":   slot_end.strftime("%I:%M:%S %p"),
+            "avg_hr":     round(sum(hr_vals) / len(hr_vals), 1) if hr_vals else None,
+            "avg_spo2":   round(sum(spo_vals) / len(spo_vals), 1) if spo_vals else None,
+            "avg_temp":   round(sum(tmp_vals) / len(tmp_vals), 1) if tmp_vals else None,
+            "falls":      falls,
+            "samples":    len(bucket),
+        })
+
+    return JSONResponse(content={
+        "slots": aggregated,
+        "total_raw": total_raw,
+        "duration": duration,
+    })
+
+
+@app.post("/add-reminder")
+async def add_reminder(req: AddReminderRequest):
+    """Add a medicine reminder and sync with devices."""
+    global next_alarm_id
+    alarm = {"id": next_alarm_id, "time": req.time, "medicine": req.medicine}
+    alarms.append(alarm)
+    next_alarm_id += 1
+    logger.info("Reminder added: %s at %s (id=%d)", req.medicine, req.time, alarm["id"])
+    sync_msg = json.dumps({"type": "SYNC_TIME", "payload": f"{req.medicine} at {req.time}"})
     await manager.broadcast_to_devices(sync_msg)
+    return {"status": "ok", "alarm": alarm}
 
-    return {"status": "ok", "reminder_time": reminder_time}
+
+@app.post("/delete-reminder")
+async def delete_reminder(req: DeleteReminderRequest):
+    """Remove a reminder by its ID."""
+    global alarms
+    alarms = [a for a in alarms if a["id"] != req.id]
+    logger.info("Reminder deleted: id=%d", req.id)
+    return {"status": "ok"}
+
+
+@app.get("/reminders")
+async def get_reminders():
+    """Return the current list of active reminders."""
+    return JSONResponse(content=alarms)
+
+
+@app.post("/reset-alarm")
+async def reset_alarm():
+    """
+    Stop the emergency fall alarm on ALL connected clients
+    (frontends + device buzzer).
+    """
+    stop_msg = json.dumps({"type": "STOP_ALARM"})
+    logger.info("🛑 Reset alarm — broadcasting STOP_ALARM to all clients")
+    await manager.broadcast_to_frontends(stop_msg)
+    await manager.broadcast_to_devices(stop_msg)
+    return {"status": "ok", "message": "Alarm stopped"}
 
 # ---------------------------------------------------------------------------
 # Static Files & Root Route

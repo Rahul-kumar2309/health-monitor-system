@@ -1,201 +1,341 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Smart Health Monitoring System – Real-time patient vitals dashboard" />
+    <meta
+      name="description"
+      content="Smart Health Monitoring System – Real-time patient vitals dashboard"
+    />
     <title>IoT Health Monitor — Rahul Kumar</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
 
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
-    <link rel="stylesheet" href="style.css" />
-</head>
-<body>
+    <!-- jsPDF + AutoTable CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- ══════════════════════════════════════════════════════
-         FALL DETECTION OVERLAY
-         ══════════════════════════════════════════════════════ -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Hidden audio for fall emergency siren -->
+    <audio id="fall-siren" loop preload="auto"
+      src="https://cdn.freesound.org/previews/536/536420_10621245-lq.mp3"></audio>
+
     <div class="fall-overlay" id="fall-overlay">
-        <div class="fall-overlay__content">
-            <span class="fall-overlay__icon">⚠️</span>
-            <h1 class="fall-overlay__title">FALL DETECTED</h1>
-            <p class="fall-overlay__sub">Immediate attention required</p>
-            <button class="fall-overlay__dismiss" id="fall-dismiss-btn">DISMISS</button>
-        </div>
+      <div class="fall-overlay__content">
+        <span class="fall-overlay__icon">⚠️</span>
+        <h1 class="fall-overlay__title">FALL DETECTED</h1>
+        <p class="fall-overlay__sub">Immediate attention required</p>
+        <button class="fall-overlay__safe-btn" id="fall-safe-btn">
+          🛑 I AM SAFE — STOP ALARM
+        </button>
+      </div>
     </div>
 
     <!-- ══════════════════════════════════════════════════════
          MEDICINE ALARM OVERLAY
          ══════════════════════════════════════════════════════ -->
     <div class="alarm-overlay" id="alarm-overlay">
-        <div class="alarm-overlay__content">
-            <span class="alarm-overlay__icon">💊</span>
-            <h1 class="alarm-overlay__title">TAKE MEDICINE</h1>
-            <p class="alarm-overlay__sub">It's time for your scheduled medication</p>
-            <button class="alarm-overlay__dismiss" id="alarm-dismiss-btn">GOT IT</button>
-        </div>
+      <div class="alarm-overlay__content">
+        <span class="alarm-overlay__icon">💊</span>
+        <h1 class="alarm-overlay__title">TIME TO TAKE MEDICINE</h1>
+        <p class="alarm-overlay__sub">
+          <span id="alarm-medicine-name">Your scheduled medication</span>
+        </p>
+        <button class="alarm-overlay__dismiss" id="alarm-dismiss-btn">
+          GOT IT
+        </button>
+      </div>
     </div>
 
     <!-- ══════════════════════════════════════════════════════
          HEADER
          ══════════════════════════════════════════════════════ -->
     <header id="app-header">
-        <div class="header__left">
-            <div class="header__pulse-ring"></div>
-            <h1 class="header__title">Patient Monitor: <span class="header__name">Rahul Kumar</span></h1>
+      <div class="header__left">
+        <div class="header__pulse-ring"></div>
+        <h1 class="header__title">
+          Patient Monitor: <span class="header__name">Rahul Kumar</span>
+        </h1>
+      </div>
+      <div class="header__right">
+        <label class="fall-toggle" for="fall-toggle-cb" title="Toggle Fall Detection">
+          <span class="fall-toggle__label">🛡️ Fall Detection</span>
+          <input type="checkbox" id="fall-toggle-cb" checked />
+          <span class="fall-toggle__slider"></span>
+        </label>
+        <div class="header__badge" id="status-badge">
+          <span class="header__dot" id="status-dot"></span>
+          <span class="header__status" id="status-text">Offline</span>
         </div>
-        <div class="header__right">
-            <div class="header__badge" id="status-badge">
-                <span class="header__dot" id="status-dot"></span>
-                <span class="header__status" id="status-text">Offline</span>
-            </div>
-            <div class="header__device" id="device-id-label">Device: —</div>
-        </div>
+        <div class="header__device" id="device-id-label">Device: —</div>
+      </div>
     </header>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
 
     <!-- ══════════════════════════════════════════════════════
          MAIN DASHBOARD
          ══════════════════════════════════════════════════════ -->
     <main id="dashboard">
+      <!-- ── Top Row: Vital Cards ──────────────────────── -->
+      <section class="vitals-row" id="vitals-row">
+        <!-- Heart Rate -->
+        <div class="vital-card" id="card-hr">
+          <div class="vital-card__icon-wrap vital-card__icon-wrap--hr">
+            <span class="vital-card__icon">❤️</span>
+          </div>
+          <div class="vital-card__info">
+            <span class="vital-card__label">Heart Rate</span>
+            <div class="vital-card__reading">
+              <span class="vital-card__value" id="val-hr">--</span>
+              <span class="vital-card__unit">BPM</span>
+            </div>
+            <div class="vital-card__bar">
+              <div
+                class="vital-card__bar-fill"
+                id="bar-hr"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+        </div>
 
-        <!-- ── Top Row: Vital Cards ──────────────────────── -->
-        <section class="vitals-row" id="vitals-row">
+        <!-- SpO2 -->
+        <div class="vital-card" id="card-spo2">
+          <div class="vital-card__icon-wrap vital-card__icon-wrap--spo2">
+            <span class="vital-card__icon">💧</span>
+          </div>
+          <div class="vital-card__info">
+            <span class="vital-card__label">SpO₂</span>
+            <div class="vital-card__reading">
+              <span class="vital-card__value" id="val-spo2">--</span>
+              <span class="vital-card__unit">%</span>
+            </div>
+            <div class="vital-card__bar">
+              <div
+                class="vital-card__bar-fill"
+                id="bar-spo2"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+        </div>
 
-            <!-- Heart Rate -->
-            <div class="vital-card" id="card-hr">
-                <div class="vital-card__icon-wrap vital-card__icon-wrap--hr">
-                    <span class="vital-card__icon">❤️</span>
-                </div>
-                <div class="vital-card__info">
-                    <span class="vital-card__label">Heart Rate</span>
-                    <div class="vital-card__reading">
-                        <span class="vital-card__value" id="val-hr">--</span>
-                        <span class="vital-card__unit">BPM</span>
-                    </div>
-                    <div class="vital-card__bar">
-                        <div class="vital-card__bar-fill" id="bar-hr" style="width:0%"></div>
-                    </div>
-                </div>
+        <!-- Temperature -->
+        <div class="vital-card" id="card-temp">
+          <div class="vital-card__icon-wrap vital-card__icon-wrap--temp">
+            <span class="vital-card__icon">🌡️</span>
+          </div>
+          <div class="vital-card__info">
+            <span class="vital-card__label">Temperature</span>
+            <div class="vital-card__reading">
+              <span class="vital-card__value" id="val-temp">--</span>
+              <span class="vital-card__unit">°C</span>
             </div>
+            <div class="vital-card__bar">
+              <div
+                class="vital-card__bar-fill"
+                id="bar-temp"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-            <!-- SpO2 -->
-            <div class="vital-card" id="card-spo2">
-                <div class="vital-card__icon-wrap vital-card__icon-wrap--spo2">
-                    <span class="vital-card__icon">💧</span>
-                </div>
-                <div class="vital-card__info">
-                    <span class="vital-card__label">SpO₂</span>
-                    <div class="vital-card__reading">
-                        <span class="vital-card__value" id="val-spo2">--</span>
-                        <span class="vital-card__unit">%</span>
-                    </div>
-                    <div class="vital-card__bar">
-                        <div class="vital-card__bar-fill" id="bar-spo2" style="width:0%"></div>
-                    </div>
-                </div>
+      <!-- ── Medicine Reminder Card ────────────────────── -->
+      <section class="reminder-section" id="reminder-section">
+        <div class="reminder-card">
+          <div class="reminder-card__header">
+            <span class="reminder-card__icon">💊</span>
+            <h2 class="reminder-card__title">Medicine Reminders</h2>
+          </div>
+          <div class="reminder-card__body">
+            <div class="reminder-card__input-group">
+              <label class="reminder-card__label">Medicine Name</label>
+              <input type="text" id="med-name" class="reminder-card__text-input"
+                     placeholder="e.g., Dolo-650" maxlength="40" />
             </div>
+            <div class="reminder-card__input-group">
+              <label class="reminder-card__label">Alarm Time</label>
+              <div class="reminder-card__picker">
+                <select id="pick-hour" class="reminder-card__select">
+                  <option value="01">01</option>
+                  <option value="02" selected>02</option>
+                  <option value="03">03</option>
+                  <option value="04">04</option>
+                  <option value="05">05</option>
+                  <option value="06">06</option>
+                  <option value="07">07</option>
+                  <option value="08">08</option>
+                  <option value="09">09</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+                <span class="reminder-card__colon">:</span>
+                <select id="pick-minute" class="reminder-card__select reminder-card__select--min">
+                  <option value="00">00</option>
+                  <option value="01">01</option>
+                  <option value="02">02</option>
+                  <option value="03">03</option>
+                  <option value="04">04</option>
+                  <option value="05">05</option>
+                  <option value="06">06</option>
+                  <option value="07">07</option>
+                  <option value="08">08</option>
+                  <option value="09">09</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                  <option value="13">13</option>
+                  <option value="14">14</option>
+                  <option value="15">15</option>
+                  <option value="16">16</option>
+                  <option value="17">17</option>
+                  <option value="18">18</option>
+                  <option value="19">19</option>
+                  <option value="20">20</option>
+                  <option value="21">21</option>
+                  <option value="22">22</option>
+                  <option value="23">23</option>
+                  <option value="24">24</option>
+                  <option value="25">25</option>
+                  <option value="26">26</option>
+                  <option value="27">27</option>
+                  <option value="28">28</option>
+                  <option value="29">29</option>
+                  <option value="30" selected>30</option>
+                  <option value="31">31</option>
+                  <option value="32">32</option>
+                  <option value="33">33</option>
+                  <option value="34">34</option>
+                  <option value="35">35</option>
+                  <option value="36">36</option>
+                  <option value="37">37</option>
+                  <option value="38">38</option>
+                  <option value="39">39</option>
+                  <option value="40">40</option>
+                  <option value="41">41</option>
+                  <option value="42">42</option>
+                  <option value="43">43</option>
+                  <option value="44">44</option>
+                  <option value="45">45</option>
+                  <option value="46">46</option>
+                  <option value="47">47</option>
+                  <option value="48">48</option>
+                  <option value="49">49</option>
+                  <option value="50">50</option>
+                  <option value="51">51</option>
+                  <option value="52">52</option>
+                  <option value="53">53</option>
+                  <option value="54">54</option>
+                  <option value="55">55</option>
+                  <option value="56">56</option>
+                  <option value="57">57</option>
+                  <option value="58">58</option>
+                  <option value="59">59</option>
+                </select>
+                <select id="pick-ampm" class="reminder-card__select reminder-card__select--ampm">
+                  <option value="AM">AM</option>
+                  <option value="PM" selected>PM</option>
+                </select>
+              </div>
+            </div>
+            <button class="reminder-card__btn" id="add-reminder-btn">
+              <span>➕</span> Add Reminder
+            </button>
+          </div>
+          <div class="reminder-card__list-wrap">
+            <h3 class="reminder-card__list-title">Active Reminders</h3>
+            <ul class="reminder-list" id="reminder-list">
+              <li class="reminder-list__empty">No reminders set yet.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
 
-            <!-- Temperature -->
-            <div class="vital-card" id="card-temp">
-                <div class="vital-card__icon-wrap vital-card__icon-wrap--temp">
-                    <span class="vital-card__icon">🌡️</span>
-                </div>
-                <div class="vital-card__info">
-                    <span class="vital-card__label">Temperature</span>
-                    <div class="vital-card__reading">
-                        <span class="vital-card__value" id="val-temp">--</span>
-                        <span class="vital-card__unit">°C</span>
-                    </div>
-                    <div class="vital-card__bar">
-                        <div class="vital-card__bar-fill" id="bar-temp" style="width:0%"></div>
-                    </div>
-                </div>
-            </div>
-        </section>
+      <!-- ── Middle Row: Live Chart ────────────────────── -->
+      <section class="chart-section" id="chart-section">
+        <div class="chart-section__header">
+          <h2 class="chart-section__title">📈 Live Heart Rate Monitor</h2>
+          <span class="chart-section__tag" id="chart-tag">No Data</span>
+        </div>
+        <div class="chart-section__canvas-wrap">
+          <canvas id="hr-chart"></canvas>
+        </div>
+      </section>
 
-        <!-- ── Medicine Reminder Card ────────────────────── -->
-        <section class="reminder-section" id="reminder-section">
-            <div class="reminder-card">
-                <div class="reminder-card__header">
-                    <span class="reminder-card__icon">💊</span>
-                    <h2 class="reminder-card__title">Medicine Reminder</h2>
-                </div>
-                <div class="reminder-card__body">
-                    <div class="reminder-card__input-group">
-                        <label for="reminder-time" class="reminder-card__label">Set Alarm Time</label>
-                        <input type="time" id="reminder-time" class="reminder-card__input" value="14:30" />
-                    </div>
-                    <button class="reminder-card__btn" id="set-reminder-btn">
-                        <span>⏰</span> Set Reminder
-                    </button>
-                </div>
-                <div class="reminder-card__status" id="reminder-status">
-                    No reminder set yet.
-                </div>
-            </div>
-        </section>
+      <!-- ── History Table ─────────────────────────────── -->
+      <section class="history-section" id="history-section">
+        <div class="history-section__header">
+          <h2 class="history-section__title">📋 History (Last 10 Min Avg)</h2>
+          <div class="history-section__actions">
+            <button class="history-section__download" id="download-report-btn">
+              📄 Download Report
+            </button>
+            <button class="history-section__refresh" id="refresh-history-btn">
+              ⟳ Refresh
+            </button>
+          </div>
+        </div>
+        <div class="history-section__table-wrap">
+          <table class="history-table" id="history-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Minute</th>
+                <th>❤️ Avg HR</th>
+                <th>💧 Avg SpO₂</th>
+                <th>🌡️ Avg Temp</th>
+                <th>🛡️ Fall</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr>
+                <td colspan="6" class="history-table__empty">
+                  No history available yet.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-        <!-- ── Middle Row: Live Chart ────────────────────── -->
-        <section class="chart-section" id="chart-section">
-            <div class="chart-section__header">
-                <h2 class="chart-section__title">📈 Live Heart Rate Monitor</h2>
-                <span class="chart-section__tag" id="chart-tag">No Data</span>
-            </div>
-            <div class="chart-section__canvas-wrap">
-                <canvas id="hr-chart"></canvas>
-            </div>
-        </section>
-
-        <!-- ── History Table ─────────────────────────────── -->
-        <section class="history-section" id="history-section">
-            <div class="history-section__header">
-                <h2 class="history-section__title">📋 Recent Readings</h2>
-                <button class="history-section__refresh" id="refresh-history-btn">⟳ Refresh</button>
-            </div>
-            <div class="history-section__table-wrap">
-                <table class="history-table" id="history-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Timestamp</th>
-                            <th>❤️ HR</th>
-                            <th>💧 SpO₂</th>
-                            <th>🌡️ Temp</th>
-                            <th>🛡️ Fall</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-tbody">
-                        <tr>
-                            <td colspan="6" class="history-table__empty">No history available yet.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- ── Bottom Row: System Logs ───────────────────── -->
-        <section class="logs-section" id="logs-section">
-            <div class="logs-section__header">
-                <h2 class="logs-section__title">🖥️ System Logs</h2>
-                <button class="logs-section__clear" id="clear-logs-btn">Clear</button>
-            </div>
-            <div class="logs-section__body" id="logs-body">
-                <p class="log-entry log-entry--info"><span class="log-ts">[SYSTEM]</span> Dashboard initialized. Waiting for device connection…</p>
-            </div>
-        </section>
+      <!-- ── Bottom Row: System Logs ───────────────────── -->
+      <section class="logs-section" id="logs-section">
+        <div class="logs-section__header">
+          <h2 class="logs-section__title">🖥️ System Logs</h2>
+          <button class="logs-section__clear" id="clear-logs-btn">Clear</button>
+        </div>
+        <div class="logs-section__body" id="logs-body">
+          <p class="log-entry log-entry--info">
+            <span class="log-ts">[SYSTEM]</span> Dashboard initialized. Waiting
+            for device connection…
+          </p>
+        </div>
+      </section>
     </main>
 
     <!-- ── Footer ────────────────────────────────────────── -->
     <footer id="app-footer">
-        <p>Smart Health Monitoring System &copy; 2026 &mdash; IoT Patient Dashboard</p>
+      <p>
+        Smart Health Monitoring System &copy; 2026 &mdash; IoT Patient Dashboard
+      </p>
     </footer>
 
     <script src="script.js"></script>
-</body>
+  </body>
 </html>

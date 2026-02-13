@@ -1,11 +1,58 @@
 # 🏥 Smart Health Monitoring System
 
-> Real-time IoT patient monitor with a **cyberpunk medical dashboard**, WebSocket-powered live updates, SQLite persistence, medicine reminders with device sync, and fall-detection alerts.
+> Real-time IoT patient monitor with a **cyberpunk medical dashboard**, WebSocket-powered live updates, SQLite persistence, multiple medicine reminders with device sync, fall-detection alerts with maintenance mode, and downloadable aggregated PDF reports.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![WebSocket](https://img.shields.io/badge/WebSocket-Live-00ff9f)
 ![License](https://img.shields.io/badge/License-MIT-blue)
+
+---
+
+## ✨ Features
+
+### 📊 Real-Time Vital Signs Dashboard
+
+- **Heart Rate**, **SpO₂**, **Temperature** — live cards with pulse animation
+- Color-coded status indicators (Normal/Warning/Critical)
+- Live **Chart.js** heart rate trend graph (last 40 data points)
+
+### 💊 Multiple Medicine Reminders
+
+- Add **unlimited named reminders** (e.g., "Dolo-650 at 02:30 PM")
+- Active reminders list with **individual delete** buttons
+- Full minute precision (00–59) for exact scheduling
+- **WebSocket alarm** triggers on both dashboard and mock device
+- Alarm overlay shows **specific medicine name and time**
+- OLED simulation on mock device displays medicine details
+
+### 🛡️ Fall Detection with Maintenance Mode
+
+- Real-time fall alerts with **full-screen emergency overlay** and siren
+- **Toggle switch** to enable/disable fall detection (maintenance mode)
+- Toast notifications for system state changes
+- When disabled, fall signals are silently ignored
+
+### 📋 History Summary (1-Minute Averages)
+
+- Table displays **last 10 minutes** of averaged data (up to 10 rows)
+- Each row = **1-minute bucket** with avg HR, SpO₂, Temp
+- Auto-refreshes every **5 seconds** via polling
+- Fall detection status per minute
+
+### 📄 Downloadable Smart Aggregated Report (PDF)
+
+- Choose duration: **Last 1 Minute** or **Last 1 Hour**
+- Generates a multi-slot averaged PDF via **jsPDF + AutoTable**
+- Includes **digital verification footer** with randomly selected doctor profile
+- S.No. numbering starts from 1
+
+### 📟 Mock ESP32 Device Simulation
+
+- Simulates realistic randomized vital signs every 1 second
+- Handles **SYNC_TIME**, **ALARM**, and **STOP_ALARM** commands
+- Displays medicine name and alarm time on simulated **OLED display**
+- Auto-reconnect on connection loss
 
 ---
 
@@ -15,15 +62,15 @@
 Health Monitoring System/
 │
 ├── backend/
-│   └── server.py          # FastAPI server (WebSocket, REST API, SQLite, alarm logic)
+│   └── server.py          # FastAPI server (WebSocket, REST API, SQLite, alarm checker)
 │
 ├── frontend/
-│   ├── index.html          # Dashboard UI (vitals, chart, reminder, history, alerts)
-│   ├── style.css           # Cyberpunk neon theme
-│   └── script.js           # WebSocket client, Chart.js, alarm/reminder logic
+│   ├── index.html          # Dashboard UI (vitals, chart, reminders, history, alerts)
+│   ├── style.css           # Cyberpunk neon theme with toggle, toast, reminder list styles
+│   └── script.js           # WebSocket client, Chart.js, multi-reminder, alarm, PDF report
 │
 ├── simulation/
-│   └── mock_device.py      # Simulated ESP32 — streams random vitals via WebSocket
+│   └── mock_device.py      # Simulated ESP32 — streams vitals, handles ALARM with medicine name
 │
 ├── requirements.txt        # Python dependencies
 ├── render.yaml             # Render.com deployment config
@@ -40,8 +87,8 @@ Health Monitoring System/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/health-monitor.git
-cd health-monitor
+git clone https://github.com/Rahul-kumar2309/health-monitor-system.git
+cd health-monitor-system
 ```
 
 ### 2. Create a Virtual Environment
@@ -68,7 +115,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🚀 How to Run Locally (PC Only)
+## 🚀 How to Run Locally
 
 You need **two terminals** open — one for the server and one for the mock device.
 
@@ -116,7 +163,7 @@ Open your browser and go to:
 http://localhost:8000
 ```
 
-🎉 You'll see the cyberpunk dashboard with live vitals, real-time chart, history table, and medicine reminder!
+🎉 You'll see the cyberpunk dashboard with live vitals, real-time chart, medicine reminders, history summary, and fall detection controls!
 
 ---
 
@@ -209,7 +256,48 @@ WS_URL = "wss://health-monitor-XXXX.onrender.com/ws/device"
 
 ---
 
-## 🐛 Troubleshooting
+## � API Reference
+
+| Method | Endpoint                 | Description                                                       |
+| ------ | ------------------------ | ----------------------------------------------------------------- |
+| `GET`  | `/`                      | Serves the dashboard (`index.html`)                               |
+| `GET`  | `/history`               | Returns last 50 raw vital readings (JSON)                         |
+| `GET`  | `/history-summary`       | Returns last 10 min of 1-minute averaged data (max 10 rows)       |
+| `GET`  | `/reminders`             | Returns list of all active medicine reminders                     |
+| `GET`  | `/report-data?duration=` | Returns aggregated report data (`1_minute` or `1_hour`)           |
+| `POST` | `/add-reminder`          | Add a reminder — Body: `{"time": "HH:MM AM/PM", "medicine": "…"}` |
+| `POST` | `/delete-reminder`       | Delete a reminder — Body: `{"id": 1}`                             |
+| `POST` | `/toggle-fall-detection` | Enable/disable fall detection — Body: `{"enabled": true}`         |
+| `POST` | `/reset-alarm`           | Stop emergency fall alarm on all connected clients                |
+| `WS`   | `/ws/frontend`           | WebSocket for browser dashboard                                   |
+| `WS`   | `/ws/device`             | WebSocket for ESP32 / mock device                                 |
+
+### WebSocket Message Types
+
+| Type         | Direction          | Description                                    |
+| ------------ | ------------------ | ---------------------------------------------- |
+| `ALARM`      | Server → Clients   | Medicine alarm with `medicine` and `time` keys |
+| `SYNC_TIME`  | Server → Devices   | Syncs new reminder info to device display      |
+| `STOP_ALARM` | Server → Clients   | Stops fall alarm on all clients                |
+| `FALL`       | Server → Frontends | Emergency fall alert with patient data         |
+
+---
+
+## 🧩 Tech Stack
+
+| Component      | Technology                                       |
+| -------------- | ------------------------------------------------ |
+| **Backend**    | Python 3.10+, FastAPI, Uvicorn, WebSockets       |
+| **Database**   | SQLite (local), PostgreSQL (production / Render) |
+| **Frontend**   | HTML5, CSS3, Vanilla JavaScript                  |
+| **Charts**     | Chart.js                                         |
+| **PDF Export** | jsPDF + jsPDF-AutoTable (via jsDelivr CDN)       |
+| **Hardware**   | ESP32 (simulated via `mock_device.py`)           |
+| **Deployment** | Render.com                                       |
+
+---
+
+## �🐛 Troubleshooting
 
 ### `ModuleNotFoundError: No module named 'xxx'`
 
@@ -266,31 +354,6 @@ The server probably isn't running. Start the server first (Terminal 1), then the
 
 ---
 
-## 🧩 Tech Stack
-
-| Component      | Technology                                       |
-| -------------- | ------------------------------------------------ |
-| **Backend**    | Python 3.10+, FastAPI, Uvicorn, WebSockets       |
-| **Database**   | SQLite (local), PostgreSQL (production / Render) |
-| **Frontend**   | HTML5, CSS3, Vanilla JavaScript                  |
-| **Charts**     | Chart.js                                         |
-| **Hardware**   | ESP32 (simulated via `mock_device.py`)           |
-| **Deployment** | Render.com                                       |
-
----
-
-## 📡 API Reference
-
-| Method | Endpoint        | Description                                     |
-| ------ | --------------- | ----------------------------------------------- |
-| `GET`  | `/`             | Serves the dashboard (index.html)               |
-| `GET`  | `/history`      | Returns last 10 vital readings (JSON)           |
-| `POST` | `/set-reminder` | Sets medicine alarm — Body: `{"time": "HH:MM"}` |
-| `WS`   | `/ws/frontend`  | WebSocket for browser dashboard                 |
-| `WS`   | `/ws/device`    | WebSocket for ESP32 / mock device               |
-
----
-
 ## 👨‍💻 Author
 
 **Rahul Kumar**
@@ -298,5 +361,5 @@ The server probably isn't running. Start the server first (Terminal 1), then the
 ---
 
 <p align="center">
-  Built with ❤️ and neon glow ✨
+  Born to Build ❤️ Tech ✨
 </p>
