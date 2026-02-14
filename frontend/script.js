@@ -56,6 +56,9 @@
   const fallToggleCb = $("fall-toggle-cb");
   const toastEl     = $("toast");
 
+  // Theme toggle
+  const themeToggleBtn = $("theme-toggle");
+
   /* ── Config ───────────────────────────────────────────── */
   const WS_PROTO = location.protocol === "https:" ? "wss:" : "ws:";
   const WS_URL = `${WS_PROTO}//${location.host}/ws/frontend`;
@@ -63,6 +66,20 @@
   const MAX_CHART_POINTS = 40;
   const MAX_LOG_ENTRIES = 80;
   const HISTORY_INTERVAL = 5000; // poll history summary every 5 s
+
+  /* ── Theme Switcher (localStorage) ────────────────────── */
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "dark") {
+    document.body.classList.add("dark-mode");
+    themeToggleBtn.textContent = "🌜 Dark";
+  }
+
+  themeToggleBtn.addEventListener("click", () => {
+    document.body.classList.toggle("dark-mode");
+    const isDark = document.body.classList.contains("dark-mode");
+    themeToggleBtn.textContent = isDark ? "🌜 Dark" : "🌞 Light";
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  });
 
   const RANGE = {
     hr: { min: 60, max: 100 },

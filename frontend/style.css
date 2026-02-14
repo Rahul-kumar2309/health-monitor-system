@@ -1,133 +1,93 @@
-/* ── Fall Detection Toggle ──────────────────────────── */
-.fall-toggle {
-    display: flex; align-items: center; gap: .5rem;
-    cursor: pointer; user-select: none;
-}
-.fall-toggle__label {
-    font-size: .72rem; color: var(--text-dim);
-    font-family: var(--font-display); font-weight: 600;
-    letter-spacing: .03em;
-}
-.fall-toggle input { display: none; }
-.fall-toggle__slider {
-    position: relative; width: 38px; height: 20px;
-    background: #444; border-radius: 10px;
-    transition: background .3s;
-}
-.fall-toggle__slider::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
-    width: 16px; height: 16px; border-radius: 50%;
-    background: #aaa; transition: transform .3s, background .3s;
-}
-.fall-toggle input:checked + .fall-toggle__slider {
-    background: var(--neon-green);
-    box-shadow: 0 0 8px var(--neon-green-glow);
-}
-.fall-toggle input:checked + .fall-toggle__slider::after {
-    transform: translateX(18px); background: #fff;
-}
-
-/* ── Toast Notification ────────────────────────────── */
-.toast {
-    position: fixed; top: -60px; left: 50%; transform: translateX(-50%);
-    padding: .6rem 1.4rem; border-radius: var(--radius-xs);
-    font-family: var(--font-display); font-size: .82rem; font-weight: 600;
-    color: #fff; z-index: 9999;
-    transition: top .4s cubic-bezier(.4,0,.2,1), opacity .4s;
-    opacity: 0; pointer-events: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,.4);
-}
-.toast.show { top: 20px; opacity: 1; }
-.toast.toast--success { background: rgba(0,200,120,.9); }
-.toast.toast--warning { background: rgba(220,80,60,.9); }
-
-/* ── Medicine Name Input ───────────────────────────── */
-.reminder-card__text-input {
-    width: 100%; padding: .55rem .8rem;
-    background: var(--surface-2); color: var(--text-main);
-    border: 1px solid var(--border); border-radius: var(--radius-xs);
-    font-family: var(--font-mono); font-size: .82rem;
-    outline: none; transition: border-color .25s;
-}
-.reminder-card__text-input:focus {
-    border-color: var(--neon-green);
-    box-shadow: 0 0 6px var(--neon-green-glow);
-}
-.reminder-card__text-input::placeholder {
-    color: var(--text-dim); opacity: .6;
-}
-
-/* ── Active Reminders List ─────────────────────────── */
-.reminder-card__list-wrap {
-    margin-top: .8rem; padding-top: .6rem;
-    border-top: 1px solid var(--border);
-}
-.reminder-card__list-title {
-    font-size: .72rem; font-weight: 600; color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: .06em;
-    margin-bottom: .4rem; font-family: var(--font-display);
-}
-.reminder-list {
-    list-style: none; padding: 0; margin: 0;
-    max-height: 160px; overflow-y: auto;
-}
-.reminder-list__empty {
-    font-size: .78rem; color: var(--text-dim);
-    padding: .4rem 0; font-style: italic;
-}
-.reminder-list__item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: .45rem .6rem; margin-bottom: .3rem;
-    background: var(--surface-2); border-radius: var(--radius-xs);
-    border-left: 3px solid var(--neon-green);
-    animation: slideIn .25s ease-out;
-}
-@keyframes slideIn {
-    from { opacity: 0; transform: translateX(-10px); }
-    to   { opacity: 1; transform: translateX(0); }
-}
-.reminder-list__info {
-    display: flex; flex-direction: column; gap: .1rem;
-}
-.reminder-list__medicine {
-    font-size: .82rem; font-weight: 600; color: var(--text-main);
-}
-.reminder-list__time {
-    font-size: .7rem; color: var(--neon-green);
-    font-family: var(--font-mono);
-}
-.reminder-list__delete {
-    background: none; border: none; cursor: pointer;
-    font-size: 1rem; padding: .2rem .4rem; border-radius: 4px;
-    opacity: .5; transition: opacity .2s, background .2s;
-}
-.reminder-list__delete:hover {
-    opacity: 1; background: rgba(220,60,60,.2);
-}
-
-/* ================================================================
-   IoT Health Monitor — Cyberpunk Medical Dashboard
+l/* ================================================================
+   IoT Health Monitor — Themeable Medical Dashboard
    ================================================================ */
 
-/* ── Reset & Custom Properties ────────────────────────────────── */
+/* ── Reset ────────────────────────────────────────────────────── */
 *, *::before, *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* ── Shared Constants (never change per theme) ────────────────── */
 :root {
-    /* Core palette */
-    --bg:              #121212;
-    --bg-card:         #1a1a2e;
-    --bg-card-hover:   #22223a;
-    --bg-surface:      #16213e;
-    --bg-input:        #0f0f1a;
+    --font-body:   'Roboto', sans-serif;
+    --font-display: 'Orbitron', sans-serif;
+    --font-mono:   'Roboto Mono', 'Courier New', monospace;
+    --radius:    16px;
+    --radius-sm: 10px;
+    --radius-xs: 6px;
+}
 
-    /* Neon accents */
-    --neon-green:      #00ff9f;
-    --neon-green-dim:  rgba(0, 255, 159, .15);
-    --neon-green-glow: rgba(0, 255, 159, .35);
+/* ================================================================
+   LIGHT THEME  (Default)
+   ================================================================ */
+html, body {
+    --bg:              #F4F7F6;
+    --bg-card:         #FFFFFF;
+    --bg-card-hover:   #f0f3f2;
+    --bg-surface:      #e8edec;
+    --bg-input:        #f0f2f4;
+    --surface-2:       #eef1f3;
+
+    --accent:          #007bff;
+    --accent-dim:      rgba(0, 123, 255, .10);
+    --accent-glow:     rgba(0, 123, 255, .25);
+
+    --neon-green:      #00b86e;
+    --neon-green-dim:  rgba(0, 184, 110, .10);
+    --neon-green-glow: rgba(0, 184, 110, .25);
+    --neon-red:        #e5003a;
+    --neon-red-dim:    rgba(229, 0, 58, .08);
+    --neon-red-glow:   rgba(229, 0, 58, .25);
+    --neon-cyan:       #0097cc;
+    --neon-cyan-dim:   rgba(0, 151, 204, .08);
+    --neon-orange:     #d97700;
+    --neon-orange-dim: rgba(217, 119, 0, .08);
+    --neon-purple:     #8b3ecf;
+    --neon-purple-dim: rgba(139, 62, 207, .10);
+    --neon-purple-glow:rgba(139, 62, 207, .25);
+
+    --text:            #333333;
+    --text-dim:        #666666;
+    --text-bright:     #111111;
+    --text-main:       #333333;
+
+    --border:          #dddddd;
+    --border-glow:     rgba(0, 184, 110, .20);
+    --bar-bg:          rgba(0, 0, 0, .06);
+    --row-border:      rgba(0, 0, 0, .06);
+    --row-hover:       rgba(0, 0, 0, .03);
+    --option-bg:       #ffffff;
+    --shadow:          0 4px 6px rgba(0,0,0,.1);
+    --shadow-header:   0 2px 12px rgba(0,0,0,.06);
+
+    --toggle-track:    #ccc;
+    --toggle-thumb:    #999;
+    --toggle-thumb-on: #fff;
+
+    --card-shadow-hover: 0 8px 30px rgba(0,0,0,.12);
+    --status-bg:       rgba(0,0,0,.02);
+}
+
+/* ================================================================
+   DARK / CYBERPUNK THEME
+   ================================================================ */
+body.dark-mode {
+    --bg:              #050505;
+    --bg-card:         #101010;
+    --bg-card-hover:   #1a1a2e;
+    --bg-surface:      #0a0a1a;
+    --bg-input:        #0f0f1a;
+    --surface-2:       #1e1e32;
+
+    --accent:          #00ffcc;
+    --accent-dim:      rgba(0, 255, 204, .12);
+    --accent-glow:     rgba(0, 255, 204, .30);
+
+    --neon-green:      #00ffcc;
+    --neon-green-dim:  rgba(0, 255, 204, .15);
+    --neon-green-glow: rgba(0, 255, 204, .35);
     --neon-red:        #ff003c;
     --neon-red-dim:    rgba(255, 0, 60, .15);
     --neon-red-glow:   rgba(255, 0, 60, .40);
@@ -139,23 +99,26 @@
     --neon-purple-dim: rgba(177, 78, 255, .15);
     --neon-purple-glow:rgba(177, 78, 255, .35);
 
-    /* Text */
     --text:            #e0e0e0;
-    --text-dim:        #7a7a8e;
+    --text-dim:        #b3b3b3;
     --text-bright:     #ffffff;
+    --text-main:       #00ffcc;
 
-    /* Borders */
-    --border:          rgba(255, 255, 255, .06);
-    --border-glow:     rgba(0, 255, 159, .20);
+    --border:          #00ffcc;
+    --border-glow:     rgba(0, 255, 204, .30);
+    --bar-bg:          rgba(255,255,255,.06);
+    --row-border:      rgba(255,255,255,.06);
+    --row-hover:       rgba(0,255,204,.05);
+    --option-bg:       #101010;
+    --shadow:          0 0 15px rgba(0, 255, 204, 0.2);
+    --shadow-header:   0 0 20px rgba(0, 255, 204, .15);
 
-    /* Typography */
-    --font-body:  'Roboto', sans-serif;
-    --font-display: 'Orbitron', sans-serif;
+    --toggle-track:    #333;
+    --toggle-thumb:    #777;
+    --toggle-thumb-on: #fff;
 
-    /* Geometry */
-    --radius:    16px;
-    --radius-sm: 10px;
-    --radius-xs: 6px;
+    --card-shadow-hover: 0 0 25px rgba(0, 255, 204, .15);
+    --status-bg:       rgba(255,255,255,.02);
 }
 
 html { scroll-behavior: smooth; }
@@ -169,10 +132,11 @@ body {
     flex-direction: column;
     -webkit-font-smoothing: antialiased;
     line-height: 1.55;
+    transition: background .4s ease, color .4s ease;
 }
 
-/* ── Scanline Background Effect ───────────────────────────────── */
-body::before {
+/* Scanline effect — dark mode only */
+body.dark-mode::before {
     content: '';
     position: fixed;
     inset: 0;
@@ -202,7 +166,8 @@ header {
     position: sticky;
     top: 0;
     z-index: 500;
-    box-shadow: 0 2px 20px rgba(0, 0, 0, .50);
+    box-shadow: var(--shadow-header);
+    transition: background .4s, border-color .4s, box-shadow .4s;
 }
 
 .header__left {
@@ -211,7 +176,7 @@ header {
     gap: 1rem;
 }
 
-/* Animated pulse ring next to title */
+/* Animated pulse ring */
 .header__pulse-ring {
     width: 14px;
     height: 14px;
@@ -241,6 +206,7 @@ header {
     font-weight: 600;
     letter-spacing: .04em;
     color: var(--text);
+    transition: color .4s;
 }
 .header__name {
     color: var(--neon-green);
@@ -251,6 +217,51 @@ header {
     display: flex;
     align-items: center;
     gap: 1.2rem;
+}
+
+/* ── Theme Toggle Button ──────────────────────────── */
+.theme-toggle {
+    display: flex; align-items: center; gap: .3rem;
+    padding: .35rem .9rem; border-radius: 999px;
+    border: 1px solid var(--accent);
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-family: var(--font-display); font-size: .68rem;
+    font-weight: 600; letter-spacing: .04em;
+    cursor: pointer; transition: all .3s; white-space: nowrap;
+}
+.theme-toggle:hover {
+    background: var(--accent); color: var(--bg);
+    box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* ── Fall Detection Toggle ──────────────────────────── */
+.fall-toggle {
+    display: flex; align-items: center; gap: .5rem;
+    cursor: pointer; user-select: none;
+}
+.fall-toggle__label {
+    font-size: .72rem; color: var(--text-dim);
+    font-family: var(--font-display); font-weight: 600;
+    letter-spacing: .03em; transition: color .4s;
+}
+.fall-toggle input { display: none; }
+.fall-toggle__slider {
+    position: relative; width: 38px; height: 20px;
+    background: var(--toggle-track); border-radius: 10px;
+    transition: background .3s;
+}
+.fall-toggle__slider::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--toggle-thumb); transition: transform .3s, background .3s;
+}
+.fall-toggle input:checked + .fall-toggle__slider {
+    background: var(--neon-green);
+    box-shadow: 0 0 8px var(--neon-green-glow);
+}
+.fall-toggle input:checked + .fall-toggle__slider::after {
+    transform: translateX(18px); background: var(--toggle-thumb-on);
 }
 
 /* Status badge */
@@ -295,7 +306,22 @@ header {
     color: var(--text-dim);
     font-family: var(--font-display);
     letter-spacing: .06em;
+    transition: color .4s;
 }
+
+/* ── Toast Notification ────────────────────────────── */
+.toast {
+    position: fixed; top: -60px; left: 50%; transform: translateX(-50%);
+    padding: .6rem 1.4rem; border-radius: var(--radius-xs);
+    font-family: var(--font-display); font-size: .82rem; font-weight: 600;
+    color: #fff; z-index: 9999;
+    transition: top .4s cubic-bezier(.4,0,.2,1), opacity .4s;
+    opacity: 0; pointer-events: none;
+    box-shadow: var(--shadow);
+}
+.toast.show { top: 20px; opacity: 1; }
+.toast.toast--success { background: rgba(0,200,120,.9); }
+.toast.toast--warning { background: rgba(220,80,60,.9); }
 
 /* ================================================================
    MAIN LAYOUT
@@ -328,9 +354,10 @@ main {
     display: flex;
     align-items: center;
     gap: 1.2rem;
-    transition: transform .3s, box-shadow .3s, border-color .3s;
+    transition: transform .3s, box-shadow .3s, border-color .3s, background .4s;
     position: relative;
     overflow: hidden;
+    box-shadow: var(--shadow);
 }
 .vital-card::before {
     content: '';
@@ -342,7 +369,7 @@ main {
 }
 .vital-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 35px rgba(0, 0, 0, .5);
+    box-shadow: var(--card-shadow-hover);
     border-color: var(--border-glow);
 }
 .vital-card:hover::before { opacity: 1; }
@@ -381,6 +408,7 @@ main {
     color: var(--text-dim);
     font-weight: 500;
     margin-bottom: .25rem;
+    transition: color .4s;
 }
 
 .vital-card__reading {
@@ -404,6 +432,7 @@ main {
     font-size: .85rem;
     color: var(--text-dim);
     font-weight: 400;
+    transition: color .4s;
 }
 
 /* Mini progress bar */
@@ -411,7 +440,7 @@ main {
     margin-top: .6rem;
     height: 4px;
     border-radius: 999px;
-    background: rgba(255,255,255,.06);
+    background: var(--bar-bg);
     overflow: hidden;
 }
 .vital-card__bar-fill {
@@ -437,6 +466,8 @@ main {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    box-shadow: var(--shadow);
+    transition: background .4s, border-color .4s, box-shadow .4s;
 }
 
 .chart-section__header {
@@ -451,6 +482,7 @@ main {
     font-weight: 600;
     letter-spacing: .04em;
     color: var(--text);
+    transition: color .4s;
 }
 
 .chart-section__tag {
@@ -491,6 +523,8 @@ main {
     display: flex;
     flex-direction: column;
     gap: .75rem;
+    box-shadow: var(--shadow);
+    transition: background .4s, border-color .4s;
 }
 
 .logs-section__header {
@@ -505,6 +539,7 @@ main {
     font-weight: 600;
     letter-spacing: .04em;
     color: var(--text);
+    transition: color .4s;
 }
 
 .logs-section__clear {
@@ -529,14 +564,15 @@ main {
     padding: .6rem .8rem;
     background: var(--bg-input);
     border-radius: var(--radius-sm);
-    font-family: 'Roboto Mono', 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: .78rem;
     line-height: 1.75;
     scrollbar-width: thin;
-    scrollbar-color: var(--neon-green) transparent;
+    scrollbar-color: var(--accent) transparent;
+    transition: background .4s;
 }
 .logs-section__body::-webkit-scrollbar       { width: 5px; }
-.logs-section__body::-webkit-scrollbar-thumb { background: var(--neon-green); border-radius: 999px; }
+.logs-section__body::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 999px; }
 
 .log-entry {
     padding: .15rem 0;
@@ -564,7 +600,7 @@ main {
     position: fixed;
     inset: 0;
     z-index: 10000;
-    display: none;                       /* hidden by default */
+    display: none;
     place-items: center;
     background: rgba(180, 0, 0, .85);
     backdrop-filter: blur(6px);
@@ -646,20 +682,21 @@ main {
 .reminder-section { display: flex; }
 .reminder-card {
     flex: 1; background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1.5rem 1.8rem; transition: border-color .3s;
+    border-radius: var(--radius); padding: 1.5rem 1.8rem; transition: border-color .3s, background .4s;
+    box-shadow: var(--shadow);
 }
 .reminder-card:hover { border-color: var(--neon-purple); }
 .reminder-card__header { display: flex; align-items: center; gap: .7rem; margin-bottom: 1.2rem; }
 .reminder-card__icon { font-size: 1.6rem; }
 .reminder-card__title {
     font-family: var(--font-display); font-size: .9rem; font-weight: 600;
-    letter-spacing: .04em; color: var(--text);
+    letter-spacing: .04em; color: var(--text); transition: color .4s;
 }
 .reminder-card__body { display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
 .reminder-card__input-group { display: flex; flex-direction: column; gap: .35rem; flex: 1; }
 .reminder-card__label {
     font-size: .7rem; text-transform: uppercase; letter-spacing: .08em;
-    color: var(--text-dim); font-weight: 500;
+    color: var(--text-dim); font-weight: 500; transition: color .4s;
 }
 .reminder-card__picker {
     display: flex; align-items: center; gap: .4rem;
@@ -668,7 +705,7 @@ main {
     background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-xs);
     padding: .55rem .7rem; font-family: var(--font-display); font-size: 1rem;
     color: var(--neon-purple); outline: none; cursor: pointer;
-    transition: border-color .3s, box-shadow .3s;
+    transition: border-color .3s, box-shadow .3s, background .4s;
     appearance: none; -webkit-appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a855f7' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right .6rem center;
@@ -681,7 +718,7 @@ main {
     border-color: var(--neon-purple);
 }
 .reminder-card__select option {
-    background: #1a1a2e; color: var(--text);
+    background: var(--option-bg); color: var(--text);
 }
 .reminder-card__select--min { min-width: 70px; }
 .reminder-card__select--ampm { min-width: 65px; font-weight: 600; letter-spacing: .04em; }
@@ -702,10 +739,75 @@ main {
 .reminder-card__status {
     margin-top: 1rem; font-size: .8rem; color: var(--text-dim);
     padding: .5rem .8rem; border-radius: var(--radius-xs);
-    background: rgba(255,255,255,.02); border-left: 3px solid var(--border); transition: all .4s;
+    background: var(--status-bg); border-left: 3px solid var(--border); transition: all .4s;
 }
 .reminder-card__status.synced {
     color: var(--neon-green); border-left-color: var(--neon-green); background: var(--neon-green-dim);
+}
+
+/* ── Medicine Name Input ───────────────────────────── */
+.reminder-card__text-input {
+    width: 100%; padding: .55rem .8rem;
+    background: var(--surface-2); color: var(--text-main);
+    border: 1px solid var(--border); border-radius: var(--radius-xs);
+    font-family: var(--font-mono); font-size: .82rem;
+    outline: none; transition: border-color .25s, background .4s;
+}
+.reminder-card__text-input:focus {
+    border-color: var(--neon-green);
+    box-shadow: 0 0 6px var(--neon-green-glow);
+}
+.reminder-card__text-input::placeholder {
+    color: var(--text-dim); opacity: .6;
+}
+
+/* ── Active Reminders List ─────────────────────────── */
+.reminder-card__list-wrap {
+    margin-top: .8rem; padding-top: .6rem;
+    border-top: 1px solid var(--border);
+}
+.reminder-card__list-title {
+    font-size: .72rem; font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: .06em;
+    margin-bottom: .4rem; font-family: var(--font-display);
+}
+.reminder-list {
+    list-style: none; padding: 0; margin: 0;
+    max-height: 160px; overflow-y: auto;
+}
+.reminder-list__empty {
+    font-size: .78rem; color: var(--text-dim);
+    padding: .4rem 0; font-style: italic;
+}
+.reminder-list__item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .45rem .6rem; margin-bottom: .3rem;
+    background: var(--surface-2); border-radius: var(--radius-xs);
+    border-left: 3px solid var(--neon-green);
+    animation: slideIn .25s ease-out;
+    transition: background .4s;
+}
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+.reminder-list__info {
+    display: flex; flex-direction: column; gap: .1rem;
+}
+.reminder-list__medicine {
+    font-size: .82rem; font-weight: 600; color: var(--text-main);
+}
+.reminder-list__time {
+    font-size: .7rem; color: var(--neon-green);
+    font-family: var(--font-mono);
+}
+.reminder-list__delete {
+    background: none; border: none; cursor: pointer;
+    font-size: 1rem; padding: .2rem .4rem; border-radius: 4px;
+    opacity: .5; transition: opacity .2s, background .2s;
+}
+.reminder-list__delete:hover {
+    opacity: 1; background: rgba(220,60,60,.2);
 }
 
 /* ================================================================
@@ -714,13 +816,14 @@ main {
 .history-section {
     background: var(--bg-card); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 1.5rem 1.8rem;
+    box-shadow: var(--shadow); transition: background .4s, border-color .4s;
 }
 .history-section__header {
     display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;
 }
 .history-section__title {
     font-family: var(--font-display); font-size: .9rem; font-weight: 600;
-    letter-spacing: .04em; color: var(--text);
+    letter-spacing: .04em; color: var(--text); transition: color .4s;
 }
 .history-section__refresh {
     background: transparent; border: 1px solid var(--border); color: var(--text-dim);
@@ -748,11 +851,12 @@ main {
     padding: .7rem .6rem; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap;
 }
 .history-table tbody td {
-    padding: .6rem .6rem; border-bottom: 1px solid rgba(255,255,255,.03);
+    padding: .6rem .6rem; border-bottom: 1px solid var(--row-border);
     color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap;
+    transition: color .4s;
 }
 .history-table tbody tr { transition: background .2s; }
-.history-table tbody tr:hover { background: rgba(255,255,255,.03); }
+.history-table tbody tr:hover { background: var(--row-hover); }
 .history-table__empty { text-align: center; color: var(--text-dim); padding: 2rem 1rem !important; font-style: italic; }
 .history-table .fall-yes { color: var(--neon-red); font-weight: 700; }
 .history-table .fall-no  { color: var(--neon-green); }
@@ -805,6 +909,7 @@ footer {
     border-top: 1px solid var(--border);
     background: var(--bg-surface);
     letter-spacing: .03em;
+    transition: background .4s, border-color .4s, color .4s;
 }
 
 /* ================================================================
