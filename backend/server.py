@@ -226,6 +226,48 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
+# AI Health Risk Calculator
+# ---------------------------------------------------------------------------
+
+def calculate_health_risk(hr, spo2, temp):
+    """
+    Weighted rule-based risk scoring (simulated AI).
+    Returns (risk_score: int 0-100, risk_label: str).
+    """
+    risk = 0
+
+    # Heart Rate rules
+    if hr is not None:
+        if hr > 120:
+            risk += 40
+        elif hr > 100 or hr < 60:
+            risk += 20
+
+    # SpO2 rules
+    if spo2 is not None:
+        if spo2 < 90:
+            risk += 50
+        elif spo2 < 95:
+            risk += 30
+
+    # Temperature rules
+    if temp is not None:
+        if temp > 37.5:
+            risk += 10
+
+    risk = min(risk, 100)
+
+    if risk >= 71:
+        label = "Critical"
+    elif risk >= 31:
+        label = "Warning"
+    else:
+        label = "Normal"
+
+    return risk, label
+
+
+# ---------------------------------------------------------------------------
 # WebSocket Endpoint
 # ---------------------------------------------------------------------------
 
@@ -246,12 +288,22 @@ async def websocket_endpoint(websocket: WebSocket, client_type: str):
                     # Guard: suppress fall events when fall detection is OFF
                     if not FALL_DETECTION_ENABLED and parsed.get("fall_detected"):
                         parsed["fall_detected"] = False
-                        data = json.dumps(parsed)
                         logger.info("Fall suppressed — detection disabled")
+
                     save_vital(parsed)
+
+                    # Inject AI health risk into the payload
+                    risk_score, risk_label = calculate_health_risk(
+                        parsed.get("heart_rate"),
+                        parsed.get("spo2"),
+                        parsed.get("temp"),
+                    )
+                    parsed["risk_score"] = risk_score
+                    parsed["risk_label"] = risk_label
+                    data = json.dumps(parsed)
                 except Exception as e:
                     logger.error("DB save error: %s", e)
-                # Broadcast to frontends
+                # Broadcast to frontends (now includes risk data)
                 await manager.broadcast_to_frontends(data)
             else:
                 logger.info("Message from frontend: %s", data)

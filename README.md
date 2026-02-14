@@ -1,6 +1,6 @@
 # 🏥 Smart Health Monitoring System
 
-> Real-time IoT patient monitor with a **cyberpunk medical dashboard**, WebSocket-powered live updates, SQLite persistence, multiple medicine reminders with device sync, fall-detection alerts with maintenance mode, and downloadable aggregated PDF reports.
+> Real-time IoT patient monitor with a **cyberpunk medical dashboard**, WebSocket-powered live updates, AI-powered health risk scoring, light/dark theme switcher, SQLite persistence, multiple medicine reminders with device sync, fall-detection alerts with maintenance mode, and downloadable aggregated PDF reports.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
@@ -47,6 +47,21 @@
 - Includes **digital verification footer** with randomly selected doctor profile
 - S.No. numbering starts from 1
 
+### 🤖 AI-Powered Health Risk Analysis
+
+- Real-time **risk scoring** (0–100%) based on weighted vital sign rules
+- **SVG ring gauge** + progress bar with dynamic color coding
+- Three risk levels: **Normal** (Green), **Warning** (Orange), **Critical** (Red + pulse)
+- Context-aware **advice text** updates with each reading
+- Risk data injected server-side and broadcast via WebSocket
+
+### 🎨 Light / Dark Theme Switcher
+
+- **Light mode** (default): clean white cards, soft shadows, professional blue accent
+- **Dark mode**: cyberpunk neon with glowing cyan borders and scanline effect
+- Smooth `.4s` animated transitions between themes
+- Preference saved to **localStorage** — persists across sessions
+
 ### 📟 Mock ESP32 Device Simulation
 
 - Simulates realistic randomized vital signs every 1 second
@@ -62,12 +77,12 @@
 Health Monitoring System/
 │
 ├── backend/
-│   └── server.py          # FastAPI server (WebSocket, REST API, SQLite, alarm checker)
+│   └── server.py          # FastAPI server (WebSocket, REST API, SQLite, alarm checker, AI risk)
 │
 ├── frontend/
-│   ├── index.html          # Dashboard UI (vitals, chart, reminders, history, alerts)
-│   ├── style.css           # Cyberpunk neon theme with toggle, toast, reminder list styles
-│   └── script.js           # WebSocket client, Chart.js, multi-reminder, alarm, PDF report
+│   ├── index.html          # Dashboard UI (vitals, AI risk card, chart, reminders, history)
+│   ├── style.css           # Themeable CSS (light/dark), risk gauge, toast, reminder styles
+│   └── script.js           # WebSocket client, Chart.js, theme switcher, risk updater, PDF
 │
 ├── simulation/
 │   └── mock_device.py      # Simulated ESP32 — streams vitals, handles ALARM with medicine name
@@ -163,7 +178,7 @@ Open your browser and go to:
 http://localhost:8000
 ```
 
-🎉 You'll see the cyberpunk dashboard with live vitals, real-time chart, medicine reminders, history summary, and fall detection controls!
+🎉 You'll see the dashboard (light mode default) with live vitals, AI risk gauge, real-time chart, medicine reminders, history summary, and fall detection controls! Click **🌞 Light** in the header to switch to cyberpunk dark mode.
 
 ---
 
@@ -288,10 +303,12 @@ WS_URL = "wss://health-monitor-XXXX.onrender.com/ws/device"
 | Component      | Technology                                       |
 | -------------- | ------------------------------------------------ |
 | **Backend**    | Python 3.10+, FastAPI, Uvicorn, WebSockets       |
+| **AI Risk**    | Weighted rule-based scoring (server-side)        |
 | **Database**   | SQLite (local), PostgreSQL (production / Render) |
-| **Frontend**   | HTML5, CSS3, Vanilla JavaScript                  |
+| **Frontend**   | HTML5, CSS3 Variables, Vanilla JavaScript        |
 | **Charts**     | Chart.js                                         |
 | **PDF Export** | jsPDF + jsPDF-AutoTable (via jsDelivr CDN)       |
+| **Theming**    | CSS custom properties + localStorage             |
 | **Hardware**   | ESP32 (simulated via `mock_device.py`)           |
 | **Deployment** | Render.com                                       |
 

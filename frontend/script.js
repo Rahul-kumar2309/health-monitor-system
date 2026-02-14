@@ -52,6 +52,14 @@
   const historyTbody = $("history-tbody");
   const refreshHistBtn = $("refresh-history-btn");
 
+  // AI Risk card
+  const riskBadge  = $("risk-badge");
+  const riskRing   = $("risk-ring");
+  const riskPct    = $("risk-pct");
+  const riskBar    = $("risk-bar");
+  const riskStatus = $("risk-status");
+  const riskAdvice = $("risk-advice");
+
   // Fall detection toggle & toast
   const fallToggleCb = $("fall-toggle-cb");
   const toastEl     = $("toast");
@@ -288,6 +296,8 @@
     updateVital(valTemp, barTemp, d.temp, RANGE.temp, 1);
     pushChart(d.heart_rate);
     if (d.fall_detected === true) triggerFallAlert();
+    // Update AI risk card
+    updateRisk(d.risk_score, d.risk_label);
     addLog(
       "data",
       `HR=${d.heart_rate} bpm  SpO₂=${d.spo2}%  Temp=${
@@ -309,6 +319,47 @@
       Math.max(0, ((raw - range.min) / (range.max - range.min)) * 100),
     );
     barEl.style.width = `${pct}%`;
+  }
+
+  /* ── AI Risk Gauge Updater ─────────────────────────────── */
+  const RING_CIRCUMFERENCE = 326.73; // 2 * π * 52
+
+  function updateRisk(score, label) {
+    if (score == null) return;
+    const s = Math.min(100, Math.max(0, score));
+    const lbl = (label || "Normal").toLowerCase();
+
+    // Ring gauge
+    const offset = RING_CIRCUMFERENCE - (RING_CIRCUMFERENCE * s / 100);
+    riskRing.style.strokeDashoffset = offset;
+    riskRing.className.baseVal = "risk-card__ring-fill";
+    if (lbl === "warning")  riskRing.classList.add("warning");
+    if (lbl === "critical") riskRing.classList.add("critical");
+
+    // Percentage text
+    riskPct.textContent = `${s}%`;
+
+    // Progress bar
+    riskBar.style.width = `${s}%`;
+    riskBar.className = "risk-card__bar-fill";
+    if (lbl === "warning")  riskBar.classList.add("warning");
+    if (lbl === "critical") riskBar.classList.add("critical");
+
+    // Badge
+    riskBadge.textContent = label;
+    riskBadge.className = "risk-card__badge " + lbl;
+
+    // Status text
+    riskStatus.innerHTML = `Status: <strong>${label}</strong>`;
+
+    // Advice
+    if (lbl === "critical") {
+      riskAdvice.textContent = "⚠ Critical risk detected! Seek immediate medical attention.";
+    } else if (lbl === "warning") {
+      riskAdvice.textContent = "⚡ Elevated risk — monitor vitals closely and consult a doctor if symptoms persist.";
+    } else {
+      riskAdvice.textContent = "Vitals are stable. No concerns detected.";
+    }
   }
 
   function pushChart(hr) {

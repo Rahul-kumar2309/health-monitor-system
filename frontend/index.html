@@ -158,6 +158,39 @@
         </div>
       </section>
 
+      <!-- ── AI Health Prediction Card ──────────────────── -->
+      <section class="risk-section" id="risk-section">
+        <div class="risk-card">
+          <div class="risk-card__header">
+            <span class="risk-card__icon">🤖</span>
+            <h2 class="risk-card__title">AI Health Prediction</h2>
+            <span class="risk-card__badge" id="risk-badge">Normal</span>
+          </div>
+          <div class="risk-card__body">
+            <div class="risk-card__gauge">
+              <svg class="risk-card__ring" viewBox="0 0 120 120">
+                <circle class="risk-card__ring-bg" cx="60" cy="60" r="52" />
+                <circle class="risk-card__ring-fill" id="risk-ring" cx="60" cy="60" r="52"
+                        stroke-dasharray="326.73" stroke-dashoffset="326.73" />
+              </svg>
+              <div class="risk-card__pct" id="risk-pct">0%</div>
+            </div>
+            <div class="risk-card__details">
+              <div class="risk-card__bar-wrap">
+                <div class="risk-card__bar">
+                  <div class="risk-card__bar-fill" id="risk-bar" style="width: 0%"></div>
+                </div>
+                <div class="risk-card__bar-labels">
+                  <span>0%</span><span>50%</span><span>100%</span>
+                </div>
+              </div>
+              <p class="risk-card__status" id="risk-status">Status: <strong>Normal</strong></p>
+              <p class="risk-card__advice" id="risk-advice">Vitals are stable. No concerns detected.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ── Medicine Reminder Card ────────────────────── -->
       <section class="reminder-section" id="reminder-section">
         <div class="reminder-card">
